@@ -15,6 +15,11 @@
 		<main.basedir>${basedir}/../..</main.basedir>
 		<refdocs.build.directory>${project.build.directory}/refdocs/</refdocs.build.directory>
 	</properties>
+	<scm>
+		<url>${git.url}</url>
+		<connection>${git.connection}</connection>
+		<developerConnection>${git.developerConnection}</developerConnection>
+	</scm>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -944,6 +949,15 @@
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-rsocket</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-saml2-service-provider</artifactId>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<optional>true</optional>
 		</dependency>
@@ -1174,7 +1188,7 @@
 										<link>https://docs.oracle.com/javaee/7/api</link>
 										<link>https://docs.spring.io/spring-framework/docs/${spring-framework.version}/javadoc-api</link>
 										<link>https://docs.spring.io/spring-security/site/docs/${spring-security.version}/api</link>
-										<link>https://tomcat.apache.org/tomcat-8.5-doc/api</link>
+										<link>https://tomcat.apache.org/tomcat-9.0-doc/api</link>
 										<link>https://www.eclipse.org/jetty/javadoc/${jetty.version}</link>
 										<link>https://www.thymeleaf.org/apidocs/thymeleaf/${thymeleaf.version}</link>
 									</links>
@@ -1236,8 +1250,8 @@
 											<groupId>org.springframework.boot</groupId>
 											<artifactId>spring-boot-maven-plugin</artifactId>
 											<version>${revision}</version>
-											<classifier>site</classifier>
-											<type>jar</type>
+											<classifier>docs</classifier>
+											<type>zip</type>
 											<outputDirectory>
 												${project.build.directory}/contents/maven-plugin
 											</outputDirectory>
@@ -1507,9 +1521,11 @@
 								<sources-root>${project.basedir}/src</sources-root>
 								<asciidoc-sources-root>${project.basedir}/src/main/asciidoc</asciidoc-sources-root>
 								<generated-resources-root>${project.basedir}/target/generated-resources</generated-resources-root>
+								<jetty-version>${jetty.version}</jetty-version>
 								<jooq-version>${jooq.version}</jooq-version>
 								<spring-boot-version>${revision}</spring-boot-version>
 								<spring-amqp-version>${spring-amqp.version}</spring-amqp-version>
+								<spring-batch-version>${spring-batch.version}</spring-batch-version>
 								<spring-data-couchbase-version>${flattenedpom.version.org.springframework.data.spring-data-couchbase}</spring-data-couchbase-version>
 								<spring-data-commons-version>${flattenedpom.version.org.springframework.data.spring-data-commons}</spring-data-commons-version>
 								<spring-data-jpa-version>${flattenedpom.version.org.springframework.data.spring-data-jpa}</spring-data-jpa-version>
@@ -1521,8 +1537,31 @@
 								<spring-framework-version>${spring-framework.version}</spring-framework-version>
 								<spring-integration-version>${spring-integration.version}</spring-integration-version>
 								<spring-security-version>${spring-security.version}</spring-security-version>
-								<spring-webservices-version>${spring-ws.version}</spring-webservices-version>							</attributes>
+								<spring-webservices-version>${spring-ws.version}</spring-webservices-version>
+							</attributes>
 						</configuration>
+						<dependencies>
+							<dependency>
+								<groupId>io.spring.asciidoctor</groupId>
+								<artifactId>spring-asciidoctor-extensions-spring-boot</artifactId>
+								<version>${spring-asciidoctor-extensions.version}</version>
+							</dependency>
+							<dependency>
+								<groupId>org.springframework.boot</groupId>
+								<artifactId>spring-boot-actuator-autoconfigure</artifactId>
+								<version>${revision}</version>
+							</dependency>
+							<dependency>
+								<groupId>org.springframework.boot</groupId>
+								<artifactId>spring-boot-autoconfigure</artifactId>
+								<version>${revision}</version>
+							</dependency>
+							<dependency>
+								<groupId>org.springframework.boot</groupId>
+								<artifactId>spring-boot-devtools</artifactId>
+								<version>${revision}</version>
+							</dependency>
+						</dependencies>
 						<executions>
 							<execution>
 								<id>generate-html-documentation</id>
@@ -1550,9 +1589,9 @@
 										<attribute-missing>warn</attribute-missing>
 									</attributes>
 									<logHandler>
-										<outputToConsole>true</outputToConsole>
+										<outputToConsole>false</outputToConsole>
 										<failIf>
-											<severity>DEBUG</severity>
+											<severity>INFO</severity>
 										</failIf>
 									</logHandler>
 								</configuration>
@@ -1580,6 +1619,12 @@
 										<stylesdir>css/</stylesdir>
 										<stylesheet>spring.css</stylesheet>
 									</attributes>
+									<logHandler>
+										<outputToConsole>false</outputToConsole>
+										<failIf>
+											<severity>INFO</severity>
+										</failIf>
+									</logHandler>
 								</configuration>
 							</execution>
 							<execution>
