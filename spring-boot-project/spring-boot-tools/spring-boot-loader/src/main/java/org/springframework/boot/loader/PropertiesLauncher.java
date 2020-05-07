@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-2020 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -371,7 +371,7 @@ public class PropertiesLauncher extends Launcher {
 		if (classLoader == null) {
 			classLoader = newClassLoader(type, NO_PARAMS);
 		}
-		Assert.notNull(classLoader, "Unable to create class loader for " + className);
+		Assert.notNull(classLoader, () -> "Unable to create class loader for " + className);
 		return classLoader;
 	}
 
@@ -516,7 +516,7 @@ public class PropertiesLauncher extends Launcher {
 	private List<Archive> getNestedArchives(String path) throws Exception {
 		Archive parent = this.parent;
 		String root = path;
-		if (!root.equals("/") && root.startsWith("/") || parent.getUrl().equals(this.home.toURI().toURL())) {
+		if (!root.equals("/") && root.startsWith("/") || parent.getUrl().toURI().equals(this.home.toURI())) {
 			// If home dir is same as parent archive, no need to add it twice.
 			return null;
 		}
