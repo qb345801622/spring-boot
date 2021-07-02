@@ -13,16 +13,9 @@ configurations {
 	documentation
 }
 
-repositories {
-	maven {
-		url "https://repo.spring.io/release"
-		mavenContent {
-			includeGroup "io.spring.asciidoctor"
-		}
-	}
-}
-
 dependencies {
+	asciidoctorExtensions("io.spring.asciidoctor:spring-asciidoctor-extensions-section-ids")
+
 	implementation(project(":spring-boot-project:spring-boot-tools:spring-boot-buildpack-platform"))
 	implementation(project(":spring-boot-project:spring-boot-tools:spring-boot-loader-tools"))
 	implementation("io.spring.gradle:dependency-management-plugin")
@@ -78,7 +71,6 @@ asciidoctor {
 	sources {
 		include "index.adoc"
 	}
-	attributes "stylesheet": "css/style.css"
 }
 
 task asciidoctorPdf(type: org.asciidoctor.gradle.jvm.AsciidoctorTask) {
