@@ -103,7 +103,7 @@ public class SpringApplicationBuilder {
 
 	/**
 	 * Creates a new {@link SpringApplication} instance from the given sources. Subclasses
-	 * may override in order to provide a custom subclass of {@link SpringApplication}
+	 * may override in order to provide a custom subclass of {@link SpringApplication}.
 	 * @param sources the sources
 	 * @return the {@link SpringApplication} instance
 	 * @since 1.1.0
@@ -116,9 +116,9 @@ public class SpringApplicationBuilder {
 	}
 
 	/**
-	 * Creates a new {@link SpringApplication} instances from the given sources using the
+	 * Creates a new {@link SpringApplication} instance from the given sources using the
 	 * given {@link ResourceLoader}. Subclasses may override in order to provide a custom
-	 * subclass of {@link SpringApplication}
+	 * subclass of {@link SpringApplication}.
 	 * @param resourceLoader the resource loader (can be null)
 	 * @param sources the sources
 	 * @return the {@link SpringApplication} instance
@@ -292,19 +292,6 @@ public class SpringApplicationBuilder {
 	}
 
 	/**
-	 * Explicitly set the context class to be used.
-	 * @param cls the context class to use
-	 * @return the current builder
-	 * @deprecated since 2.4.0 for removal in 2.6.0 in favor of
-	 * {@link #contextFactory(ApplicationContextFactory)}
-	 */
-	@Deprecated
-	public SpringApplicationBuilder contextClass(Class<? extends ConfigurableApplicationContext> cls) {
-		this.application.setApplicationContextClass(cls);
-		return this;
-	}
-
-	/**
 	 * Explicitly set the factory used to create the application context.
 	 * @param factory the factory to use
 	 * @return the current builder
@@ -415,21 +402,6 @@ public class SpringApplicationBuilder {
 	 */
 	public SpringApplicationBuilder setAddConversionService(boolean addConversionService) {
 		this.application.setAddConversionService(addConversionService);
-		return this;
-	}
-
-	/**
-	 * Adds a {@link org.springframework.boot.Bootstrapper} that can be used to initialize
-	 * the {@link BootstrapRegistry}.
-	 * @param bootstrapper the bootstraper
-	 * @return the current builder
-	 * @since 2.4.0
-	 * @deprecated since 2.4.5 for removal in 2.6 in favor of
-	 * {@link #addBootstrapRegistryInitializer(BootstrapRegistryInitializer)}
-	 */
-	@Deprecated
-	public SpringApplicationBuilder addBootstrapper(org.springframework.boot.Bootstrapper bootstrapper) {
-		this.application.addBootstrapper(bootstrapper);
 		return this;
 	}
 
