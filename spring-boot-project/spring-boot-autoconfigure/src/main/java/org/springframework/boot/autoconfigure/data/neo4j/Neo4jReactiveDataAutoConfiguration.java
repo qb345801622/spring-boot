@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,18 @@ package org.springframework.boot.autoconfigure.data.neo4j;
 import org.neo4j.driver.Driver;
 import reactor.core.publisher.Flux;
 
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.data.neo4j.core.ReactiveDatabaseSelectionProvider;
 import org.springframework.data.neo4j.core.ReactiveNeo4jClient;
 import org.springframework.data.neo4j.core.ReactiveNeo4jOperations;
 import org.springframework.data.neo4j.core.ReactiveNeo4jTemplate;
 import org.springframework.data.neo4j.core.mapping.Neo4jMappingContext;
+import org.springframework.data.neo4j.core.transaction.ReactiveNeo4jTransactionManager;
 import org.springframework.data.neo4j.repository.config.ReactiveNeo4jRepositoryConfigurationExtension;
 import org.springframework.transaction.ReactiveTransactionManager;
 
@@ -42,10 +42,9 @@ import org.springframework.transaction.ReactiveTransactionManager;
  * @author Stephane Nicoll
  * @since 2.4.0
  */
-@Configuration(proxyBeanMethods = false)
+@AutoConfiguration(after = Neo4jDataAutoConfiguration.class)
 @ConditionalOnClass({ Driver.class, ReactiveNeo4jTemplate.class, ReactiveTransactionManager.class, Flux.class })
 @ConditionalOnBean(Driver.class)
-@AutoConfigureAfter(Neo4jDataAutoConfiguration.class)
 public class Neo4jReactiveDataAutoConfiguration {
 
 	@Bean
@@ -68,6 +67,13 @@ public class Neo4jReactiveDataAutoConfiguration {
 	public ReactiveNeo4jTemplate reactiveNeo4jTemplate(ReactiveNeo4jClient neo4jClient,
 			Neo4jMappingContext neo4jMappingContext) {
 		return new ReactiveNeo4jTemplate(neo4jClient, neo4jMappingContext);
+	}
+
+	@Bean(ReactiveNeo4jRepositoryConfigurationExtension.DEFAULT_TRANSACTION_MANAGER_BEAN_NAME)
+	@ConditionalOnMissingBean(ReactiveTransactionManager.class)
+	ReactiveNeo4jTransactionManager rectiveNeo4jTransactionManager(Driver driver,
+			ReactiveDatabaseSelectionProvider databaseNameProvider) {
+		return new ReactiveNeo4jTransactionManager(driver, databaseNameProvider);
 	}
 
 }

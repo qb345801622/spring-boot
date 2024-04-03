@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package org.springframework.boot.loader.tools;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.attribute.FileTime;
+import java.util.Map;
 import java.util.jar.JarFile;
 
 import org.springframework.util.Assert;
@@ -46,16 +47,22 @@ public class Repackager extends Packager {
 		super(source);
 	}
 
-	/**
-	 * Create a new {@link Repackager} instance.
-	 * @param source the source archive file to package
-	 * @param layoutFactory the layout factory to use or {@code null}
-	 * @deprecated since 2.3.10 for removal in 2.5 in favor of {@link #Repackager(File)}
-	 * and {@link #setLayoutFactory(LayoutFactory)}
-	 */
-	@Deprecated
-	public Repackager(File source, LayoutFactory layoutFactory) {
-		super(source, layoutFactory);
+	@Override
+	protected void writeSignatureFileIfNecessary(Map<String, Library> writtenLibraries, AbstractJarWriter writer)
+			throws IOException {
+		if (getSource().getName().toLowerCase().endsWith(".jar") && hasSignedLibrary(writtenLibraries)) {
+			writer.writeEntry("META-INF/BOOT.SF", (entryWriter) -> {
+			});
+		}
+	}
+
+	private boolean hasSignedLibrary(Map<String, Library> writtenLibraries) throws IOException {
+		for (Library library : writtenLibraries.values()) {
+			if (!(library instanceof JarModeLibrary) && FileUtils.isSignedJarFile(library.getFile())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -113,7 +120,7 @@ public class Repackager extends Packager {
 	public void repackage(File destination, Libraries libraries, LaunchScript launchScript, FileTime lastModifiedTime)
 			throws IOException {
 		Assert.isTrue(destination != null && !destination.isDirectory(), "Invalid destination");
-		Layout layout = getLayout(); // get layout early
+		getLayout(); // get layout early
 		destination = destination.getAbsoluteFile();
 		File source = getSource();
 		if (isAlreadyPackaged() && source.equals(destination)) {
@@ -141,7 +148,7 @@ public class Repackager extends Packager {
 	private void repackage(JarFile sourceJar, File destination, Libraries libraries, LaunchScript launchScript,
 			FileTime lastModifiedTime) throws IOException {
 		try (JarWriter writer = new JarWriter(destination, launchScript, lastModifiedTime)) {
-			write(sourceJar, libraries, writer);
+			write(sourceJar, libraries, writer, lastModifiedTime != null);
 		}
 		if (lastModifiedTime != null) {
 			destination.setLastModified(lastModifiedTime.toMillis());

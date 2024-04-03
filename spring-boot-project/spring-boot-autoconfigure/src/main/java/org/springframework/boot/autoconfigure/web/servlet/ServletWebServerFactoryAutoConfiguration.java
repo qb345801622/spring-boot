@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,8 @@
 
 package org.springframework.boot.autoconfigure.web.servlet;
 
-import java.util.function.Supplier;
-import java.util.stream.Collectors;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletRequest;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletRequest;
 
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -29,18 +26,22 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type;
+import org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.ssl.SslBundles;
 import org.springframework.boot.web.server.ErrorPageRegistrarBeanPostProcessor;
 import org.springframework.boot.web.server.WebServerFactoryCustomizerBeanPostProcessor;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.WebListenerRegistrar;
+import org.springframework.boot.web.servlet.server.CookieSameSiteSupplier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -58,9 +59,10 @@ import org.springframework.web.filter.ForwardedHeaderFilter;
  * @author Ivan Sopov
  * @author Brian Clozel
  * @author Stephane Nicoll
+ * @author Scott Frederick
  * @since 2.0.0
  */
-@Configuration(proxyBeanMethods = false)
+@AutoConfiguration(after = SslAutoConfiguration.class)
 @AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
 @ConditionalOnClass(ServletRequest.class)
 @ConditionalOnWebApplication(type = Type.SERVLET)
@@ -73,9 +75,10 @@ public class ServletWebServerFactoryAutoConfiguration {
 
 	@Bean
 	public ServletWebServerFactoryCustomizer servletWebServerFactoryCustomizer(ServerProperties serverProperties,
-			ObjectProvider<WebListenerRegistrar> webListenerRegistrars) {
-		return new ServletWebServerFactoryCustomizer(serverProperties,
-				webListenerRegistrars.orderedStream().collect(Collectors.toList()));
+			ObjectProvider<WebListenerRegistrar> webListenerRegistrars,
+			ObjectProvider<CookieSameSiteSupplier> cookieSameSiteSuppliers, ObjectProvider<SslBundles> sslBundles) {
+		return new ServletWebServerFactoryCustomizer(serverProperties, webListenerRegistrars.orderedStream().toList(),
+				cookieSameSiteSuppliers.orderedStream().toList(), sslBundles.getIfAvailable());
 	}
 
 	@Bean
@@ -85,15 +88,34 @@ public class ServletWebServerFactoryAutoConfiguration {
 		return new TomcatServletWebServerFactoryCustomizer(serverProperties);
 	}
 
-	@Bean
-	@ConditionalOnMissingFilterBean(ForwardedHeaderFilter.class)
+	@Configuration(proxyBeanMethods = false)
 	@ConditionalOnProperty(value = "server.forward-headers-strategy", havingValue = "framework")
-	public FilterRegistrationBean<ForwardedHeaderFilter> forwardedHeaderFilter() {
-		ForwardedHeaderFilter filter = new ForwardedHeaderFilter();
-		FilterRegistrationBean<ForwardedHeaderFilter> registration = new FilterRegistrationBean<>(filter);
-		registration.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ASYNC, DispatcherType.ERROR);
-		registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
-		return registration;
+	@ConditionalOnMissingFilterBean(ForwardedHeaderFilter.class)
+	static class ForwardedHeaderFilterConfiguration {
+
+		@Bean
+		@ConditionalOnClass(name = "org.apache.catalina.startup.Tomcat")
+		ForwardedHeaderFilterCustomizer tomcatForwardedHeaderFilterCustomizer(ServerProperties serverProperties) {
+			return (filter) -> filter.setRelativeRedirects(serverProperties.getTomcat().isUseRelativeRedirects());
+		}
+
+		@Bean
+		FilterRegistrationBean<ForwardedHeaderFilter> forwardedHeaderFilter(
+				ObjectProvider<ForwardedHeaderFilterCustomizer> customizerProvider) {
+			ForwardedHeaderFilter filter = new ForwardedHeaderFilter();
+			customizerProvider.ifAvailable((customizer) -> customizer.customize(filter));
+			FilterRegistrationBean<ForwardedHeaderFilter> registration = new FilterRegistrationBean<>(filter);
+			registration.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ASYNC, DispatcherType.ERROR);
+			registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+			return registration;
+		}
+
+	}
+
+	interface ForwardedHeaderFilterCustomizer {
+
+		void customize(ForwardedHeaderFilter filter);
+
 	}
 
 	/**
@@ -106,8 +128,8 @@ public class ServletWebServerFactoryAutoConfiguration {
 
 		@Override
 		public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-			if (beanFactory instanceof ConfigurableListableBeanFactory) {
-				this.beanFactory = (ConfigurableListableBeanFactory) beanFactory;
+			if (beanFactory instanceof ConfigurableListableBeanFactory listableBeanFactory) {
+				this.beanFactory = listableBeanFactory;
 			}
 		}
 
@@ -118,16 +140,15 @@ public class ServletWebServerFactoryAutoConfiguration {
 				return;
 			}
 			registerSyntheticBeanIfMissing(registry, "webServerFactoryCustomizerBeanPostProcessor",
-					WebServerFactoryCustomizerBeanPostProcessor.class,
-					WebServerFactoryCustomizerBeanPostProcessor::new);
+					WebServerFactoryCustomizerBeanPostProcessor.class);
 			registerSyntheticBeanIfMissing(registry, "errorPageRegistrarBeanPostProcessor",
-					ErrorPageRegistrarBeanPostProcessor.class, ErrorPageRegistrarBeanPostProcessor::new);
+					ErrorPageRegistrarBeanPostProcessor.class);
 		}
 
 		private <T> void registerSyntheticBeanIfMissing(BeanDefinitionRegistry registry, String name,
-				Class<T> beanClass, Supplier<T> instanceSupplier) {
+				Class<T> beanClass) {
 			if (ObjectUtils.isEmpty(this.beanFactory.getBeanNamesForType(beanClass, true, false))) {
-				RootBeanDefinition beanDefinition = new RootBeanDefinition(beanClass, instanceSupplier);
+				RootBeanDefinition beanDefinition = new RootBeanDefinition(beanClass);
 				beanDefinition.setSynthetic(true);
 				registry.registerBeanDefinition(name, beanDefinition);
 			}

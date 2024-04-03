@@ -16,8 +16,9 @@
 
 package org.springframework.boot.autoconfigure.jms;
 
-import javax.jms.ConnectionFactory;
-import javax.jms.ExceptionListener;
+import io.micrometer.observation.ObservationRegistry;
+import jakarta.jms.ConnectionFactory;
+import jakarta.jms.ExceptionListener;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -53,15 +54,19 @@ class JmsAnnotationDrivenConfiguration {
 
 	private final ObjectProvider<ExceptionListener> exceptionListener;
 
+	private final ObjectProvider<ObservationRegistry> observationRegistry;
+
 	private final JmsProperties properties;
 
 	JmsAnnotationDrivenConfiguration(ObjectProvider<DestinationResolver> destinationResolver,
 			ObjectProvider<JtaTransactionManager> transactionManager, ObjectProvider<MessageConverter> messageConverter,
-			ObjectProvider<ExceptionListener> exceptionListener, JmsProperties properties) {
+			ObjectProvider<ExceptionListener> exceptionListener,
+			ObjectProvider<ObservationRegistry> observationRegistry, JmsProperties properties) {
 		this.destinationResolver = destinationResolver;
 		this.transactionManager = transactionManager;
 		this.messageConverter = messageConverter;
 		this.exceptionListener = exceptionListener;
+		this.observationRegistry = observationRegistry;
 		this.properties = properties;
 	}
 
@@ -73,6 +78,7 @@ class JmsAnnotationDrivenConfiguration {
 		configurer.setTransactionManager(this.transactionManager.getIfUnique());
 		configurer.setMessageConverter(this.messageConverter.getIfUnique());
 		configurer.setExceptionListener(this.exceptionListener.getIfUnique());
+		configurer.setObservationRegistry(this.observationRegistry.getIfUnique());
 		configurer.setJmsProperties(this.properties);
 		return configurer;
 	}

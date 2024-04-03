@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import org.springframework.boot.buildpack.platform.docker.type.VolumeName;
  * @author Phillip Webb
  * @author Scott Frederick
  * @author Andrey Shlykov
+ * @author Rafael Ceccone
  * @since 2.3.0
  */
 public abstract class AbstractBuildLog implements BuildLog {
@@ -68,6 +69,12 @@ public abstract class AbstractBuildLog implements BuildLog {
 	}
 
 	@Override
+	public void executingLifecycle(BuildRequest request, LifecycleVersion version, Cache buildCache) {
+		log(" > Executing lifecycle version " + version);
+		log(" > Using build cache " + buildCache);
+	}
+
+	@Override
 	public Consumer<LogUpdateEvent> runningPhase(BuildRequest request, String name) {
 		log();
 		log(" > Running " + name);
@@ -86,6 +93,12 @@ public abstract class AbstractBuildLog implements BuildLog {
 	public void executedLifecycle(BuildRequest request) {
 		log();
 		log("Successfully built image '" + request.getName() + "'");
+		log();
+	}
+
+	@Override
+	public void taggedImage(ImageReference tag) {
+		log("Successfully created image tag '" + tag + "'");
 		log();
 	}
 

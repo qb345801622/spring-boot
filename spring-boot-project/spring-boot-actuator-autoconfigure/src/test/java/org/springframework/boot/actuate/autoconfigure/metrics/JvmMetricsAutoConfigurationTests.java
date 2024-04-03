@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package org.springframework.boot.actuate.autoconfigure.metrics;
 
-import java.io.File;
-
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
-import io.micrometer.core.instrument.binder.jvm.DiskSpaceMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmCompilationMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmHeapPressureMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmInfoMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
 import org.junit.jupiter.api.Test;
@@ -40,12 +40,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * @author Andy Wilkinson
  * @author Stephane Nicoll
- * @author Chris Bono
+ * @author Eddú Meléndez
  */
 class JvmMetricsAutoConfigurationTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner().with(MetricsRun.simple())
-			.withConfiguration(AutoConfigurations.of(JvmMetricsAutoConfiguration.class));
+		.withConfiguration(AutoConfigurations.of(JvmMetricsAutoConfiguration.class));
 
 	@Test
 	void autoConfiguresJvmMetrics() {
@@ -55,37 +55,54 @@ class JvmMetricsAutoConfigurationTests {
 	@Test
 	void allowsCustomJvmGcMetricsToBeUsed() {
 		this.contextRunner.withUserConfiguration(CustomJvmGcMetricsConfiguration.class)
-				.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customJvmGcMetrics")));
+			.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customJvmGcMetrics")));
+	}
+
+	@Test
+	void allowsCustomJvmHeapPressureMetricsToBeUsed() {
+		this.contextRunner.withUserConfiguration(CustomJvmHeapPressureMetricsConfiguration.class)
+			.run(assertMetricsBeans()
+				.andThen((context) -> assertThat(context).hasBean("customJvmHeapPressureMetrics")));
 	}
 
 	@Test
 	void allowsCustomJvmMemoryMetricsToBeUsed() {
 		this.contextRunner.withUserConfiguration(CustomJvmMemoryMetricsConfiguration.class)
-				.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customJvmMemoryMetrics")));
+			.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customJvmMemoryMetrics")));
 	}
 
 	@Test
 	void allowsCustomJvmThreadMetricsToBeUsed() {
 		this.contextRunner.withUserConfiguration(CustomJvmThreadMetricsConfiguration.class)
-				.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customJvmThreadMetrics")));
+			.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customJvmThreadMetrics")));
 	}
 
 	@Test
 	void allowsCustomClassLoaderMetricsToBeUsed() {
-		this.contextRunner.withUserConfiguration(CustomClassLoaderMetricsConfiguration.class).run(
-				assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customClassLoaderMetrics")));
+		this.contextRunner.withUserConfiguration(CustomClassLoaderMetricsConfiguration.class)
+			.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customClassLoaderMetrics")));
 	}
 
 	@Test
-	void allowsCustomDiskSpaceMetricsToBeUsed() {
-		this.contextRunner.withUserConfiguration(CustomDiskSpaceMetricsConfiguration.class)
-				.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customDiskSpaceMetrics")));
+	void allowsCustomJvmInfoMetricsToBeUsed() {
+		this.contextRunner.withUserConfiguration(CustomJvmInfoMetricsConfiguration.class)
+			.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customJvmInfoMetrics")));
+	}
+
+	@Test
+	void allowsCustomJvmCompilationMetricsToBeUsed() {
+		this.contextRunner.withUserConfiguration(CustomJvmCompilationMetricsConfiguration.class)
+			.run(assertMetricsBeans().andThen((context) -> assertThat(context).hasBean("customJvmCompilationMetrics")));
 	}
 
 	private ContextConsumer<AssertableApplicationContext> assertMetricsBeans() {
-		return (context) -> assertThat(context).hasSingleBean(JvmGcMetrics.class).hasSingleBean(JvmMemoryMetrics.class)
-				.hasSingleBean(JvmThreadMetrics.class).hasSingleBean(ClassLoaderMetrics.class)
-				.hasSingleBean(DiskSpaceMetrics.class);
+		return (context) -> assertThat(context).hasSingleBean(JvmGcMetrics.class)
+			.hasSingleBean(JvmHeapPressureMetrics.class)
+			.hasSingleBean(JvmMemoryMetrics.class)
+			.hasSingleBean(JvmThreadMetrics.class)
+			.hasSingleBean(ClassLoaderMetrics.class)
+			.hasSingleBean(JvmInfoMetrics.class)
+			.hasSingleBean(JvmCompilationMetrics.class);
 	}
 
 	@Configuration(proxyBeanMethods = false)
@@ -94,6 +111,16 @@ class JvmMetricsAutoConfigurationTests {
 		@Bean
 		JvmGcMetrics customJvmGcMetrics() {
 			return new JvmGcMetrics();
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class CustomJvmHeapPressureMetricsConfiguration {
+
+		@Bean
+		JvmHeapPressureMetrics customJvmHeapPressureMetrics() {
+			return new JvmHeapPressureMetrics();
 		}
 
 	}
@@ -129,11 +156,21 @@ class JvmMetricsAutoConfigurationTests {
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	static class CustomDiskSpaceMetricsConfiguration {
+	static class CustomJvmInfoMetricsConfiguration {
 
 		@Bean
-		DiskSpaceMetrics customDiskSpaceMetrics() {
-			return new DiskSpaceMetrics(new File(System.getProperty("user.dir")));
+		JvmInfoMetrics customJvmInfoMetrics() {
+			return new JvmInfoMetrics();
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class CustomJvmCompilationMetricsConfiguration {
+
+		@Bean
+		JvmCompilationMetrics customJvmCompilationMetrics() {
+			return new JvmCompilationMetrics();
 		}
 
 	}

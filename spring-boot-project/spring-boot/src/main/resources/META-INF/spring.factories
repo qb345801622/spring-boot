@@ -19,6 +19,11 @@ org.springframework.boot.context.config.ConfigDataLoader=\
 org.springframework.boot.context.config.ConfigTreeConfigDataLoader,\
 org.springframework.boot.context.config.StandardConfigDataLoader
 
+# Application Context Factories
+org.springframework.boot.ApplicationContextFactory=\
+org.springframework.boot.web.reactive.context.ReactiveWebServerApplicationContextFactory,\
+org.springframework.boot.web.servlet.context.ServletWebServerApplicationContextFactory
+
 # Run Listeners
 org.springframework.boot.SpringApplicationRunListener=\
 org.springframework.boot.context.event.EventPublishingRunListener
@@ -52,7 +57,7 @@ org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor,\
 org.springframework.boot.env.RandomValuePropertySourceEnvironmentPostProcessor,\
 org.springframework.boot.env.SpringApplicationJsonEnvironmentPostProcessor,\
 org.springframework.boot.env.SystemEnvironmentPropertySourceEnvironmentPostProcessor,\
-org.springframework.boot.reactor.DebugAgentEnvironmentPostProcessor
+org.springframework.boot.reactor.ReactorEnvironmentPostProcessor
 
 # Failure Analyzers
 org.springframework.boot.diagnostics.FailureAnalyzer=\
@@ -64,16 +69,19 @@ org.springframework.boot.diagnostics.analyzer.BeanDefinitionOverrideFailureAnaly
 org.springframework.boot.diagnostics.analyzer.BeanNotOfRequiredTypeFailureAnalyzer,\
 org.springframework.boot.diagnostics.analyzer.BindFailureAnalyzer,\
 org.springframework.boot.diagnostics.analyzer.BindValidationFailureAnalyzer,\
-org.springframework.boot.diagnostics.analyzer.UnboundConfigurationPropertyFailureAnalyzer,\
-org.springframework.boot.diagnostics.analyzer.ConnectorStartFailureAnalyzer,\
-org.springframework.boot.diagnostics.analyzer.NoSuchMethodFailureAnalyzer,\
-org.springframework.boot.diagnostics.analyzer.NoUniqueBeanDefinitionFailureAnalyzer,\
-org.springframework.boot.diagnostics.analyzer.PortInUseFailureAnalyzer,\
-org.springframework.boot.diagnostics.analyzer.ValidationExceptionFailureAnalyzer,\
 org.springframework.boot.diagnostics.analyzer.InvalidConfigurationPropertyNameFailureAnalyzer,\
 org.springframework.boot.diagnostics.analyzer.InvalidConfigurationPropertyValueFailureAnalyzer,\
+org.springframework.boot.diagnostics.analyzer.MissingParameterNamesFailureAnalyzer,\
+org.springframework.boot.diagnostics.analyzer.MutuallyExclusiveConfigurationPropertiesFailureAnalyzer,\
+org.springframework.boot.diagnostics.analyzer.NoSuchMethodFailureAnalyzer,\
+org.springframework.boot.diagnostics.analyzer.NoUniqueBeanDefinitionFailureAnalyzer,\
 org.springframework.boot.diagnostics.analyzer.PatternParseFailureAnalyzer,\
-org.springframework.boot.liquibase.LiquibaseChangelogMissingFailureAnalyzer
+org.springframework.boot.diagnostics.analyzer.PortInUseFailureAnalyzer,\
+org.springframework.boot.diagnostics.analyzer.UnboundConfigurationPropertyFailureAnalyzer,\
+org.springframework.boot.diagnostics.analyzer.ValidationExceptionFailureAnalyzer,\
+org.springframework.boot.liquibase.LiquibaseChangelogMissingFailureAnalyzer,\
+org.springframework.boot.web.context.MissingWebServerFactoryBeanFailureAnalyzer,\
+org.springframework.boot.web.embedded.tomcat.ConnectorStartFailureAnalyzer
 
 # Failure Analysis Reporters
 org.springframework.boot.diagnostics.FailureAnalysisReporter=\
@@ -82,7 +90,6 @@ org.springframework.boot.diagnostics.LoggingFailureAnalysisReporter
 # Database Initializer Detectors
 org.springframework.boot.sql.init.dependency.DatabaseInitializerDetector=\
 org.springframework.boot.flyway.FlywayDatabaseInitializerDetector,\
-org.springframework.boot.jdbc.AbstractDataSourceInitializerDatabaseInitializerDetector,\
 org.springframework.boot.jdbc.init.DataSourceScriptDatabaseInitializerDetector,\
 org.springframework.boot.liquibase.LiquibaseDatabaseInitializerDetector,\
 org.springframework.boot.orm.jpa.JpaDatabaseInitializerDetector,\
@@ -94,3 +101,7 @@ org.springframework.boot.sql.init.dependency.AnnotationDependsOnDatabaseInitiali
 org.springframework.boot.jdbc.SpringJdbcDependsOnDatabaseInitializationDetector,\
 org.springframework.boot.jooq.JooqDependsOnDatabaseInitializationDetector,\
 org.springframework.boot.orm.jpa.JpaDependsOnDatabaseInitializationDetector
+
+# Resource Locator Protocol Resolvers
+org.springframework.core.io.ProtocolResolver=\
+org.springframework.boot.io.Base64ProtocolResolver

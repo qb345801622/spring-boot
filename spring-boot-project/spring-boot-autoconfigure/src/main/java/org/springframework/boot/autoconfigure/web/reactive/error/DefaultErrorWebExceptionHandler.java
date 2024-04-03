@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
+import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.RequestPredicate;
 import org.springframework.web.reactive.function.server.RouterFunction;
@@ -74,6 +75,7 @@ import static org.springframework.web.reactive.function.server.RouterFunctions.r
  *
  * @author Brian Clozel
  * @author Scott Frederick
+ * @author Moritz Halbritter
  * @since 2.0.0
  */
 public class DefaultErrorWebExceptionHandler extends AbstractErrorWebExceptionHandler {
@@ -120,10 +122,10 @@ public class DefaultErrorWebExceptionHandler extends AbstractErrorWebExceptionHa
 		int errorStatus = getHttpStatus(error);
 		ServerResponse.BodyBuilder responseBody = ServerResponse.status(errorStatus).contentType(TEXT_HTML_UTF8);
 		return Flux.just(getData(errorStatus).toArray(new String[] {}))
-				.flatMap((viewName) -> renderErrorView(viewName, responseBody, error))
-				.switchIfEmpty(this.errorProperties.getWhitelabel().isEnabled()
-						? renderDefaultErrorView(responseBody, error) : Mono.error(getError(request)))
-				.next();
+			.flatMap((viewName) -> renderErrorView(viewName, responseBody, error))
+			.switchIfEmpty(this.errorProperties.getWhitelabel().isEnabled()
+					? renderDefaultErrorView(responseBody, error) : Mono.error(getError(request)))
+			.next();
 	}
 
 	private List<String> getData(int errorStatus) {
@@ -144,8 +146,9 @@ public class DefaultErrorWebExceptionHandler extends AbstractErrorWebExceptionHa
 	 */
 	protected Mono<ServerResponse> renderErrorResponse(ServerRequest request) {
 		Map<String, Object> error = getErrorAttributes(request, getErrorAttributeOptions(request, MediaType.ALL));
-		return ServerResponse.status(getHttpStatus(error)).contentType(MediaType.APPLICATION_JSON)
-				.body(BodyInserters.fromValue(error));
+		return ServerResponse.status(getHttpStatus(error))
+			.contentType(MediaType.APPLICATION_JSON)
+			.body(BodyInserters.fromValue(error));
 	}
 
 	protected ErrorAttributeOptions getErrorAttributeOptions(ServerRequest request, MediaType mediaType) {
@@ -162,6 +165,7 @@ public class DefaultErrorWebExceptionHandler extends AbstractErrorWebExceptionHa
 		if (isIncludeBindingErrors(request, mediaType)) {
 			options = options.including(Include.BINDING_ERRORS);
 		}
+		options = isIncludePath(request, mediaType) ? options.including(Include.PATH) : options.excluding(Include.PATH);
 		return options;
 	}
 
@@ -172,14 +176,11 @@ public class DefaultErrorWebExceptionHandler extends AbstractErrorWebExceptionHa
 	 * @return if the stacktrace attribute should be included
 	 */
 	protected boolean isIncludeStackTrace(ServerRequest request, MediaType produces) {
-		switch (this.errorProperties.getIncludeStacktrace()) {
-		case ALWAYS:
-			return true;
-		case ON_PARAM:
-			return isTraceEnabled(request);
-		default:
-			return false;
-		}
+		return switch (this.errorProperties.getIncludeStacktrace()) {
+			case ALWAYS -> true;
+			case ON_PARAM -> isTraceEnabled(request);
+			case NEVER -> false;
+		};
 	}
 
 	/**
@@ -189,14 +190,11 @@ public class DefaultErrorWebExceptionHandler extends AbstractErrorWebExceptionHa
 	 * @return if the message attribute should be included
 	 */
 	protected boolean isIncludeMessage(ServerRequest request, MediaType produces) {
-		switch (this.errorProperties.getIncludeMessage()) {
-		case ALWAYS:
-			return true;
-		case ON_PARAM:
-			return isMessageEnabled(request);
-		default:
-			return false;
-		}
+		return switch (this.errorProperties.getIncludeMessage()) {
+			case ALWAYS -> true;
+			case ON_PARAM -> isMessageEnabled(request);
+			case NEVER -> false;
+		};
 	}
 
 	/**
@@ -206,14 +204,26 @@ public class DefaultErrorWebExceptionHandler extends AbstractErrorWebExceptionHa
 	 * @return if the errors attribute should be included
 	 */
 	protected boolean isIncludeBindingErrors(ServerRequest request, MediaType produces) {
-		switch (this.errorProperties.getIncludeBindingErrors()) {
-		case ALWAYS:
-			return true;
-		case ON_PARAM:
-			return isBindingErrorsEnabled(request);
-		default:
-			return false;
-		}
+		return switch (this.errorProperties.getIncludeBindingErrors()) {
+			case ALWAYS -> true;
+			case ON_PARAM -> isBindingErrorsEnabled(request);
+			case NEVER -> false;
+		};
+	}
+
+	/**
+	 * Determine if the path attribute should be included.
+	 * @param request the source request
+	 * @param produces the media type produced (or {@code MediaType.ALL})
+	 * @return if the path attribute should be included
+	 * @since 3.3.0
+	 */
+	protected boolean isIncludePath(ServerRequest request, MediaType produces) {
+		return switch (this.errorProperties.getIncludePath()) {
+			case ALWAYS -> true;
+			case ON_PARAM -> isPathEnabled(request);
+			case NEVER -> false;
+		};
 	}
 
 	/**
@@ -237,7 +247,7 @@ public class DefaultErrorWebExceptionHandler extends AbstractErrorWebExceptionHa
 			try {
 				List<MediaType> acceptedMediaTypes = serverRequest.headers().accept();
 				acceptedMediaTypes.removeIf(MediaType.ALL::equalsTypeAndSubtype);
-				MediaType.sortBySpecificityAndQuality(acceptedMediaTypes);
+				MimeTypeUtils.sortBySpecificity(acceptedMediaTypes);
 				return acceptedMediaTypes.stream().anyMatch(MediaType.TEXT_HTML::isCompatibleWith);
 			}
 			catch (InvalidMediaTypeException ex) {

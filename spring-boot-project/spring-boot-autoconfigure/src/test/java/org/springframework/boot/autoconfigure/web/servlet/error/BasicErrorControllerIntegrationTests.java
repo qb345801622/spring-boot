@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2024 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +21,17 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Parameter;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,14 +47,17 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -261,21 +264,23 @@ class BasicErrorControllerIntegrationTests {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void bindingExceptionWithErrors(String param) {
 		ResponseEntity<Map> entity = new TestRestTemplate().getForEntity(createUrl("/bind" + param), Map.class);
-		assertErrorAttributes(entity.getBody(), "400", "Bad Request", BindException.class, null, "/bind");
+		assertErrorAttributes(entity.getBody(), "400", "Bad Request", MethodArgumentNotValidException.class, null,
+				"/bind");
 		assertThat(entity.getBody()).containsKey("errors");
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void bindingExceptionWithoutErrors(String param) {
 		ResponseEntity<Map> entity = new TestRestTemplate().getForEntity(createUrl("/bind" + param), Map.class);
-		assertErrorAttributes(entity.getBody(), "400", "Bad Request", BindException.class, null, "/bind");
+		assertErrorAttributes(entity.getBody(), "400", "Bad Request", MethodArgumentNotValidException.class, null,
+				"/bind");
 		assertThat(entity.getBody()).doesNotContainKey("errors");
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void bindingExceptionWithMessage(String param) {
 		ResponseEntity<Map> entity = new TestRestTemplate().getForEntity(createUrl("/bind" + param), Map.class);
-		assertErrorAttributes(entity.getBody(), "400", "Bad Request", BindException.class,
+		assertErrorAttributes(entity.getBody(), "400", "Bad Request", MethodArgumentNotValidException.class,
 				"Validation failed for object='test'. Error count: 1", "/bind");
 		assertThat(entity.getBody()).doesNotContainKey("errors");
 	}
@@ -283,7 +288,8 @@ class BasicErrorControllerIntegrationTests {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void bindingExceptionWithoutMessage(String param) {
 		ResponseEntity<Map> entity = new TestRestTemplate().getForEntity(createUrl("/bind" + param), Map.class);
-		assertErrorAttributes(entity.getBody(), "400", "Bad Request", BindException.class, null, "/bind");
+		assertErrorAttributes(entity.getBody(), "400", "Bad Request", MethodArgumentNotValidException.class, null,
+				"/bind");
 		assertThat(entity.getBody()).doesNotContainKey("errors");
 	}
 
@@ -292,7 +298,9 @@ class BasicErrorControllerIntegrationTests {
 	void testRequestBodyValidationForMachineClient() {
 		load("--server.error.include-exception=true");
 		RequestEntity request = RequestEntity.post(URI.create(createUrl("/bodyValidation")))
-				.accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON).body("{}");
+			.accept(MediaType.APPLICATION_JSON)
+			.contentType(MediaType.APPLICATION_JSON)
+			.body("{}");
 		ResponseEntity<Map> entity = new TestRestTemplate().exchange(request, Map.class);
 		assertErrorAttributes(entity.getBody(), "400", "Bad Request", MethodArgumentNotValidException.class, null,
 				"/bodyValidation");
@@ -304,7 +312,8 @@ class BasicErrorControllerIntegrationTests {
 	void testBindingExceptionForMachineClientDefault() {
 		load();
 		RequestEntity request = RequestEntity.get(URI.create(createUrl("/bind?trace=true,message=true")))
-				.accept(MediaType.APPLICATION_JSON).build();
+			.accept(MediaType.APPLICATION_JSON)
+			.build();
 		ResponseEntity<Map> entity = new TestRestTemplate().exchange(request, Map.class);
 		assertThat(entity.getBody()).doesNotContainKey("exception");
 		assertThat(entity.getBody()).doesNotContainKey("trace");
@@ -314,8 +323,9 @@ class BasicErrorControllerIntegrationTests {
 	@Test
 	void testConventionTemplateMapping() {
 		load();
-		RequestEntity<?> request = RequestEntity.get(URI.create(createUrl("/noStorage"))).accept(MediaType.TEXT_HTML)
-				.build();
+		RequestEntity<?> request = RequestEntity.get(URI.create(createUrl("/noStorage")))
+			.accept(MediaType.TEXT_HTML)
+			.build();
 		ResponseEntity<String> entity = new TestRestTemplate().exchange(request, String.class);
 		String resp = entity.getBody();
 		assertThat(resp).contains("We are out of storage");
@@ -325,7 +335,8 @@ class BasicErrorControllerIntegrationTests {
 	void testIncompatibleMediaType() {
 		load();
 		RequestEntity<?> request = RequestEntity.get(URI.create(createUrl("/incompatibleType")))
-				.accept(MediaType.TEXT_PLAIN).build();
+			.accept(MediaType.TEXT_PLAIN)
+			.build();
 		ResponseEntity<String> entity = new TestRestTemplate().exchange(request, String.class);
 		assertThat(entity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 		assertThat(entity.getHeaders().getContentType()).isNull();
@@ -334,7 +345,7 @@ class BasicErrorControllerIntegrationTests {
 
 	private void assertErrorAttributes(Map<?, ?> content, String status, String error, Class<?> exception,
 			String message, String path) {
-		assertThat(content.get("status").toString()).as("Wrong status").isEqualTo(status);
+		assertThat(content.get("status")).as("Wrong status").hasToString(status);
 		assertThat(content.get("error")).as("Wrong error").isEqualTo(error);
 		if (exception != null) {
 			assertThat(content.get("exception")).as("Wrong exception").isEqualTo(exception.getName());
@@ -424,10 +435,12 @@ class BasicErrorControllerIntegrationTests {
 			}
 
 			@RequestMapping("/bind")
-			String bind() throws Exception {
+			String bind(@RequestAttribute(required = false) String foo) throws Exception {
 				BindException error = new BindException(this, "test");
 				error.rejectValue("foo", "bar.error");
-				throw error;
+				Parameter fooParameter = ReflectionUtils.findMethod(Errors.class, "bind", String.class)
+					.getParameters()[0];
+				throw new MethodArgumentNotValidException(MethodParameter.forParameter(fooParameter), error);
 			}
 
 			@PostMapping(path = "/bodyValidation", produces = "application/json")

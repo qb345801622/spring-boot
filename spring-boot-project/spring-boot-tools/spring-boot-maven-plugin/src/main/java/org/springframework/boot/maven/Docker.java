@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,13 @@ public class Docker {
 
 	private String host;
 
+	private String context;
+
 	private boolean tlsVerify;
 
 	private String certPath;
+
+	private boolean bindHostToBuilder;
 
 	private DockerRegistry builderRegistry;
 
@@ -47,6 +51,18 @@ public class Docker {
 
 	void setHost(String host) {
 		this.host = host;
+	}
+
+	/**
+	 * The Docker context to use to retrieve host configuration.
+	 * @return the Docker context
+	 */
+	public String getContext() {
+		return this.context;
+	}
+
+	public void setContext(String context) {
+		this.context = context;
 	}
 
 	/**
@@ -72,6 +88,18 @@ public class Docker {
 
 	void setCertPath(String certPath) {
 		this.certPath = certPath;
+	}
+
+	/**
+	 * Whether to use the configured Docker host in the builder container.
+	 * @return {@code true} to use the configured Docker host in the builder container
+	 */
+	public boolean isBindHostToBuilder() {
+		return this.bindHostToBuilder;
+	}
+
+	void setBindHostToBuilder(boolean bindHostToBuilder) {
+		this.bindHostToBuilder = bindHostToBuilder;
 	}
 
 	/**
@@ -117,12 +145,20 @@ public class Docker {
 	DockerConfiguration asDockerConfiguration() {
 		DockerConfiguration dockerConfiguration = new DockerConfiguration();
 		dockerConfiguration = customizeHost(dockerConfiguration);
+		dockerConfiguration = dockerConfiguration.withBindHostToBuilder(this.bindHostToBuilder);
 		dockerConfiguration = customizeBuilderAuthentication(dockerConfiguration);
 		dockerConfiguration = customizePublishAuthentication(dockerConfiguration);
 		return dockerConfiguration;
 	}
 
 	private DockerConfiguration customizeHost(DockerConfiguration dockerConfiguration) {
+		if (this.context != null && this.host != null) {
+			throw new IllegalArgumentException(
+					"Invalid Docker configuration, either context or host can be provided but not both");
+		}
+		if (this.context != null) {
+			return dockerConfiguration.withContext(this.context);
+		}
 		if (this.host != null) {
 			return dockerConfiguration.withHost(this.host, this.tlsVerify, this.certPath);
 		}
@@ -146,7 +182,7 @@ public class Docker {
 
 	private DockerConfiguration customizePublishAuthentication(DockerConfiguration dockerConfiguration) {
 		if (this.publishRegistry == null || this.publishRegistry.isEmpty()) {
-			return dockerConfiguration;
+			return dockerConfiguration.withEmptyPublishRegistryAuthentication();
 		}
 		if (this.publishRegistry.hasTokenAuth() && !this.publishRegistry.hasUserAuth()) {
 			return dockerConfiguration.withPublishRegistryTokenAuthentication(this.publishRegistry.getToken());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @author Stephane Nicoll
  * @since 2.3.0
  */
-@ConfigurationProperties(prefix = "management.metrics.export.stackdriver")
+@ConfigurationProperties(prefix = "management.stackdriver.metrics.export")
 public class StackdriverProperties extends StepRegistryProperties {
 
 	/**
@@ -46,6 +46,19 @@ public class StackdriverProperties extends StepRegistryProperties {
 	 * Monitored resource's labels.
 	 */
 	private Map<String, String> resourceLabels;
+
+	/**
+	 * Whether to use semantically correct metric types. When false, counter metrics are
+	 * published as the GAUGE MetricKind. When true, counter metrics are published as the
+	 * CUMULATIVE MetricKind.
+	 */
+	private boolean useSemanticMetricTypes = false;
+
+	/**
+	 * Prefix for metric type. Valid prefixes are described in the Google Cloud
+	 * documentation (https://cloud.google.com/monitoring/custom-metrics#identifier).
+	 */
+	private String metricTypePrefix = "custom.googleapis.com/";
 
 	public String getProjectId() {
 		return this.projectId;
@@ -69,6 +82,22 @@ public class StackdriverProperties extends StepRegistryProperties {
 
 	public void setResourceLabels(Map<String, String> resourceLabels) {
 		this.resourceLabels = resourceLabels;
+	}
+
+	public boolean isUseSemanticMetricTypes() {
+		return this.useSemanticMetricTypes;
+	}
+
+	public void setUseSemanticMetricTypes(boolean useSemanticMetricTypes) {
+		this.useSemanticMetricTypes = useSemanticMetricTypes;
+	}
+
+	public String getMetricTypePrefix() {
+		return this.metricTypePrefix;
+	}
+
+	public void setMetricTypePrefix(String metricTypePrefix) {
+		this.metricTypePrefix = metricTypePrefix;
 	}
 
 }

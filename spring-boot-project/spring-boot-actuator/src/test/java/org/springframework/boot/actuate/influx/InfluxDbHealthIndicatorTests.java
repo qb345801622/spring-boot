@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2021 the original author or authors.
+ * Copyright 2012-2023 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,14 +28,16 @@ import org.springframework.boot.actuate.health.Status;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 /**
  * Tests for {@link InfluxDbHealthIndicator}.
  *
  * @author Eddú Meléndez
  */
+@SuppressWarnings("removal")
+@Deprecated(since = "3.2.0", forRemoval = true)
 class InfluxDbHealthIndicatorTests {
 
 	@Test
@@ -47,8 +49,8 @@ class InfluxDbHealthIndicatorTests {
 		InfluxDbHealthIndicator healthIndicator = new InfluxDbHealthIndicator(influxDb);
 		Health health = healthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
-		assertThat(health.getDetails().get("version")).isEqualTo("0.9");
-		verify(influxDb).ping();
+		assertThat(health.getDetails()).containsEntry("version", "0.9");
+		then(influxDb).should().ping();
 	}
 
 	@Test
@@ -59,7 +61,7 @@ class InfluxDbHealthIndicatorTests {
 		Health health = healthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.DOWN);
 		assertThat((String) health.getDetails().get("error")).contains("Connection failed");
-		verify(influxDb).ping();
+		then(influxDb).should().ping();
 	}
 
 }
